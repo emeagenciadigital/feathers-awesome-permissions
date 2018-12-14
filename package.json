@@ -1,6 +1,6 @@
 {
   "name": "@e-me/feathers-awesome-permissions",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "sistema de permisos modulares para feathers js",
   "main": "lib/index.js",
   "keywords": [
