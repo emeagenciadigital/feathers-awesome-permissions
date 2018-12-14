@@ -2,9 +2,10 @@
 //
 // See http://docs.sequelizejs.com/en/latest/docs/models-definition/
 // for more of what you can do here.
+const path = require('path');
 const merge = require('lodash.merge');
 const sequelizeSchema = require('./users-roles.sequelize-model');
-const userModel = require('../../../../../models/users.model');
+const userModel = require(path.join(__dirname, '../../../../../../../src/models/users.model'));
 const roleModel = require('../roles/roles.sequelize');
 
 let moduleExports = function (app) {

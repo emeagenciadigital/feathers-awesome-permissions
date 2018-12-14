@@ -10,7 +10,7 @@ module.exports = (function () {
         console.log('feathers awesome permissions - By: e-me agency digital');
     }
 
-    Services.prototype.configure = function (app) {
+    Services.configure = function (app) {
         app.configure(permissionsDomains);
         app.configure(permissionsActions);
         app.configure(permissions);
