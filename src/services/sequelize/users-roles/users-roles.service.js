@@ -1,6 +1,6 @@
 // Initializes the `usersRoles` service on path `/users-roles`. (Can be re-generated.)
 const createService = require('feathers-sequelize');
-const createModel = require('./users-roles.model');
+const createModel = require('./users-roles.sequelize');
 const hooks = require('./users-roles.hooks');
 
 let moduleExports = function (app) {

@@ -1,6 +1,6 @@
 // Initializes the `permissionsDomains` service on path `/permissions-domains`. (Can be re-generated.)
 const createService = require('feathers-sequelize');
-const createModel = require('./permissions-domains.model');
+const createModel = require('./permissions-domains.sequelize');
 const hooks = require('./permissions-domains.hooks');
 
 let moduleExports = function (app) {

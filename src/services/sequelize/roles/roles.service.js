@@ -1,6 +1,6 @@
 // Initializes the `roles` service on path `/roles`. (Can be re-generated.)
 const createService = require('feathers-sequelize');
-const createModel = require('./roles.model');
+const createModel = require('./roles.sequelize');
 const hooks = require('./roles.hooks');
 
 let moduleExports = function (app) {

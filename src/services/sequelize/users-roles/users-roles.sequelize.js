@@ -1,29 +1,38 @@
-/* eslint quotes: 0 */
-// Defines Sequelize model for service `usersRoles`. (Can be re-generated.)
+// usersRoles-model.js - A Sequelize model. (Can be re-generated.)
+//
+// See http://docs.sequelizejs.com/en/latest/docs/models-definition/
+// for more of what you can do here.
 const merge = require('lodash.merge');
-const Sequelize = require('sequelize');
-// eslint-disable-next-line no-unused-vars
-const DataTypes = Sequelize.DataTypes;
-// !code: imports // !end
-// !code: init // !end
+const sequelizeSchema = require('./users-roles.sequelize-model');
+const userModel = require('../../../../../models/users.model');
+const roleModel = require('../roles/roles.sequelize');
 
-let moduleExports = merge({},
-    // !<DEFAULT> code: sequelize_model
-    {
-        user_id: {
-            type: DataTypes.INTEGER,
-            allowNull: false
-        },
-        role_id: {
-            type: DataTypes.INTEGER
-        }
-    },
-    // !end
-    // !code: moduleExports // !end
-);
+let moduleExports = function (app) {
+    let sequelizeClient = app.get('sequelizeClient');
 
-// !code: exports // !end
+    const usersRoles = sequelizeClient.define('users_roles',
+        sequelizeSchema,
+        merge(
+            {
+                hooks: {
+                    beforeCount(options) {
+                        options.raw = true;
+                    },
+                },
+            },
+        )
+    );
+
+    // eslint-disable-next-line no-unused-vars
+    usersRoles.associate = function (models) {
+        // Define associations here for foreign keys
+        //   - No foreign keys defined.
+        // See http://docs.sequelizejs.com/en/latest/docs/associations/
+        usersRoles.belongsTo(userModel(app), {foreignKey: 'user_id', onDelete: 'RESTRICT'});
+        usersRoles.belongsTo(roleModel(app), {foreignKey: 'role_id', onDelete: 'RESTRICT'});
+    };
+
+    return usersRoles;
+};
+
 module.exports = moduleExports;
-
-// !code: funcs // !end
-// !code: end // !end
