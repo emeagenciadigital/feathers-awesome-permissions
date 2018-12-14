@@ -3,6 +3,10 @@
   "version": "0.0.2",
   "description": "sistema de permisos modulares para feathers js",
   "main": "lib/index.js",
+  "keywords": [
+    "feathers",
+    "feathers-plugin"
+  ],
   "directories": {
     "lib": "lib"
   },
@@ -13,8 +17,8 @@
     "type": "git",
     "url": "git+https://github.com/emeagenciadigital/feathers-awesome-permissions.git"
   },
-  "author": "emeagenciadigital - ezequiel alfonso bahoque lopez <ezequielbahoquelopez@gmail.com>",
-  "license": "ISC",
+  "author": "emeagenciadigital - Ezequiel Alfonso Bahoque Lopez <ezequielbahoquelopez@gmail.com>",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/emeagenciadigital/feathers-awesome-permissions/issues"
   },
