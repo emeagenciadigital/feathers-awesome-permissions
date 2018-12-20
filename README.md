@@ -1,0 +1,1 @@
+# feathers-awesome-permissions
