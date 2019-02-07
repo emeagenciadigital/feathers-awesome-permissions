@@ -64,25 +64,25 @@ function _hasPermit(userPermissions, options) {
 }
 
 
-module.exports.HasPermit = function (options = {}) {
+const defaultOptions = {
+	adminRole: 'SUPER_ADMIN',
+	userService: 'users',
+	mode: 'strict',
+	requiredPermissions: [],
+	restrictToOwner: {
+		ownerField: 'id',
+		otherField: 'id'
+	}
+};
+
+module.exports.HasPermit = function (_options = {}) {
+
+	const options = Object.assign({}, defaultOptions, _options);
+
 	return (context) => {
 		// If called internally
 		if (!context.params.provider)
 			return Promise.resolve(context);
-
-		/*
-         * we define default values
-         */
-		options.adminRole = options.adminRole ? options.adminRole : 'SUPER_ADMIN';
-		options.userService = options.userService ? options.userService : 'users';
-		options.mode = options.mode === 'trust' || options.mode === 'strict' ? options.mode : 'strict';
-		options.requiredPermissions = options.requiredPermissions && Array.isArray(options.requiredPermissions) ? options.requiredPermissions : [];
-		options.restrictToOwner = options.restrictToOwner ? options.restrictToOwner : {
-			ownerField: 'id',
-			otherField: 'id'
-		};
-		options.restrictToOwner.ownerField = options.restrictToOwner.ownerField ? options.restrictToOwner.ownerField : 'id';
-		options.restrictToOwner.otherField = options.restrictToOwner.otherField ? options.restrictToOwner.otherField : 'id';
 
 		return getSession(options, context).then(resultSession => {
 			const cs = resultSession[0]; // contextSession
