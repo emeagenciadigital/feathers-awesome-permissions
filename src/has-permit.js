@@ -4,13 +4,13 @@ const Permissions = require('./permisions');
 const errors = require('@feathersjs/errors');
 
 
-function getContexSession(context) {
+function getContextSession(context) {
 	return context.params.user ? Promise.resolve(context) : (authenticate('jwt')(context).catch(() => context));
 }
 
 
 function getSession(options, context) {
-	return getContexSession(context).then(contextSession => {
+    return getContextSession(context).then(contextSession => {
 		const session = contextSession.params.user;
 
 		/*
@@ -19,7 +19,7 @@ function getSession(options, context) {
 		if (!session && !options.allowAnonymousUsers)
 			return new errors.NotAuthenticated('the user is not authenticated');
 
-		return [contextSession, session];
+        return {contextSession, session};
 	});
 }
 
@@ -60,14 +60,15 @@ function _hasPermit(userPermissions, options) {
 		}
 	}
 
-	return [isPermit, principalTarget];
+    return {isPermit, principalTarget};
 }
 
 
 const defaultOptions = {
+    mode: 'strict',
 	adminRole: 'SUPER_ADMIN',
-	userService: 'users',
-	mode: 'strict',
+    entity: 'user',
+    allowAnonymousUsers: false,
 	requiredPermissions: [],
 	restrictToOwner: {
 		ownerField: 'id',
@@ -84,122 +85,139 @@ module.exports.HasPermit = function (_options = {}) {
 		if (!context.params.provider)
 			return Promise.resolve(context);
 
-		return getSession(options, context).then(resultSession => {
-			const cs = resultSession[0]; // contextSession
-			const session = resultSession[1];
+        return getSession(options, context).then(({contextSession: cs, session}) => {
+            const action = {
+                find: 'read',
+                get: 'read',
+                create: 'create',
+                update: 'update',
+                patch: 'update',
+                remove: 'delete'
+            }[cs.method];
 
-			const principalAction = cs.method !== 'update' && cs.method !== 'patch' ? cs.method : 'update';
 			const permissions = new Permissions(cs, options, session);
-			const async_permissions_process = [];
 
-			return permissions.getRoles().then(roles => {
+            const async_permissions = [];
+            const async_permissions_required = [];
+
+            return permissions.getRoles().then(async roles => {
 				/*
                  * we see if the authenticated user has the required permissions
                  */
 				if (roles.filter(it => it.name === options.adminRole).length > 0)
 					return cs;
 
-				async_permissions_process.push(permissions.getRequiredPermissions('*', '*'));
-				async_permissions_process.push(permissions.getRequiredPermissions('*', principalAction));
+                async_permissions.push(permissions.getRequiredPermissions('*', '*'));
+                async_permissions.push(permissions.getRequiredPermissions('*', action));
 
 				if (options.mode === 'strict') {
-					async_permissions_process.push(permissions.getRequiredPermissions(cs.path, '*'));
-					async_permissions_process.push(permissions.getRequiredPermissions(cs.path, principalAction));
+                    async_permissions.push(permissions.getRequiredPermissions(cs.path, '*'));
+                    async_permissions_required.push(permissions.getRequiredPermissions(cs.path, action));
 				}
 
 				for (let a = 0; a < options.requiredPermissions.length; a++) {
-					async_permissions_process.push(permissions.getRequiredPermissions(options.requiredPermissions[a].domain, options.requiredPermissions[a].action));
-					async_permissions_process.push(permissions.getRequiredPermissions('*', options.requiredPermissions[a].action));
-					async_permissions_process.push(permissions.getRequiredPermissions(options.requiredPermissions[a].domain, '*'));
+                    async_permissions_required.push(permissions.getRequiredPermissions(options.requiredPermissions[a].domain, options.requiredPermissions[a].action));
+                    async_permissions.push(permissions.getRequiredPermissions('*', options.requiredPermissions[a].action));
+                    async_permissions.push(permissions.getRequiredPermissions(options.requiredPermissions[a].domain, '*'));
 				}
 
-				return Promise.all(async_permissions_process).then(requiredPermissions => {
+                return Promise.all(async_permissions_required).then(requiredPermissions => {
+
 					requiredPermissions = [].concat(...requiredPermissions);
 
-					if (requiredPermissions.filter(requiredPermissions => !requiredPermissions).length > 0)
+                    if (requiredPermissions.filter(it => !it).length > 0)
 						throw new errors.Conflict('the required permits are not found');
 
-					requiredPermissions = requiredPermissions.filter(requiredPermissions => requiredPermissions).map(it => {
-						return {domain: it.domain[0].id, action: it.action[0].id};
-					});
+                    requiredPermissions = requiredPermissions
+                        .filter(requiredPermissions => requiredPermissions)
+                        .map(it => ({domain: it.domain[0].id, action: it.action[0].id}));
 
-					return permissions.getPermissions(requiredPermissions)
-						.then(async userPermissions => {
-							userPermissions = Array.from(new Set(userPermissions.map(element => JSON.stringify(element)))).map(element => JSON.parse(element));
+                    return Promise.all(async_permissions).then(generalPermissions => {
 
+                        generalPermissions = [].concat(...generalPermissions);
 
-							let isPermit;
-							let principalTarget;
+                        generalPermissions = generalPermissions
+                            .filter(generalPermissions => generalPermissions)
+                            .map(it => ({domain: it.domain[0].id, action: it.action[0].id}));
 
-							[isPermit, principalTarget] = _hasPermit(userPermissions, {
-								...options,
-								domain: cs.path,
-								action: principalAction
-							});
+                        const allPermission = [...generalPermissions, ...requiredPermissions];
 
-							if (!isPermit) throw new errors.Forbidden('access denied');
+                        return permissions.getPermissions(allPermission)
+                            .then(async userPermissions => {
+                                userPermissions = Array.from(new Set(userPermissions.map(element => JSON.stringify(element)))).map(element => JSON.parse(element));
 
-							let records = getItems(cs);
+                                let {isPermit, principalTarget} = _hasPermit(userPermissions, {
+                                    ...options,
+                                    domain: cs.path,
+                                    action: action
+                                });
 
-							if (!records) records = {};
+                                if (!isPermit) throw new errors.Forbidden('access denied');
 
-							// get target;
-                            if (options.mode === 'strict' && principalTarget === '*') {
-								return cs;
-							}
+                                let records = getItems(cs);
 
-							if (options.mode === 'strict' && principalTarget) {
-								const targeIsSelf = '';
-								if (principalTarget === 'self') {
+                                if (!records) records = {};
 
-									principalTarget = session[options.restrictToOwner.ownerField] + '';
-								}
+                                // get target;
+                                if (options.mode === 'strict' && principalTarget === '*') {
+                                    return cs;
+                                }
 
-								if (isNaN(parseInt(principalTarget))) {
-									throw new errors.Forbidden('access denied');
-								} else {
-									if (
-										(
-											cs.method === 'get' ||
-											cs.method === 'update' ||
-											cs.method === 'patch' ||
-											cs.method === 'remove'
-										) &&
-										cs.id
-									) {
-										const objectExist = !!(await cs.app.service(cs.path).getModel().findAll({
-											where: {id: cs.id, [options.restrictToOwner.otherField]: principalTarget}
-										}))[0];
+                                if (options.mode === 'strict' && principalTarget) {
+                                    // const targeIsSelf = '';
+                                    if (principalTarget === 'self') {
 
-										if (!objectExist) throw new errors.Forbidden('access denied');
-									} else if (
-										(
-											cs.method === 'find' ||
-											cs.method === 'update' ||
-											cs.method === 'patch' ||
-											cs.method === 'remove'
-										) &&
-										!cs.id
-									) {
-										// if (!Array.isArray(records)) records = [records];
-										cs.params.query[options.restrictToOwner.otherField] = {
-											$in: principalTarget.split(',').map(x => parseInt(x))
-										};
+                                        principalTarget = session[options.restrictToOwner.ownerField] + '';
+                                    }
 
-										/*
-										records[options.restrictToOwner.otherField] = {
-											$in: principalTarget.split(',').map(x => parseInt(x))
-										};
-										*/
-									}
-								}
-							}
+                                    if (isNaN(parseInt(principalTarget))) {
+                                        throw new errors.Forbidden('access denied');
+                                    } else {
+                                        if (
+                                            (
+                                                cs.method === 'get' ||
+                                                cs.method === 'update' ||
+                                                cs.method === 'patch' ||
+                                                cs.method === 'remove'
+                                            ) &&
+                                            cs.id
+                                        ) {
+                                            const objectExist = !!(await cs.app.service(cs.path).getModel().findAll({
+                                                where: {
+                                                    id: cs.id,
+                                                    [options.restrictToOwner.otherField]: principalTarget
+                                                }
+                                            }))[0];
 
-							replaceItems(cs, records);
+                                            if (!objectExist) throw new errors.Forbidden('access denied');
+                                        } else if (
+                                            (
+                                                cs.method === 'find' ||
+                                                cs.method === 'update' ||
+                                                cs.method === 'patch' ||
+                                                cs.method === 'remove'
+                                            ) &&
+                                            !cs.id
+                                        ) {
+                                            // if (!Array.isArray(records)) records = [records];
+                                            cs.params.query[options.restrictToOwner.otherField] = {
+                                                $in: principalTarget.split(',').map(x => parseInt(x))
+                                            };
 
-							return cs;
-						});
+                                            /*
+                                            records[options.restrictToOwner.otherField] = {
+                                                $in: principalTarget.split(',').map(x => parseInt(x))
+                                            };
+                                            */
+                                        }
+                                    }
+                                }
 
+                                replaceItems(cs, records);
+
+                                return cs;
+                            });
+                    });
 				});
 			});
 
