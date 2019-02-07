@@ -12,20 +12,12 @@ class Permissions {
 	 * @return {Array}
 	 */
 	async getRoles() {
-		const userRoles = await this.context.app.service('users-roles').find({
-			query: {
-				user_id: this.user.id,
-				$limit: 10000000000
-			}, paginate: false
+		const entityRoles = await this.context.app.service('users-roles').find({
+			query: {[`${this.options.entity}_id`]: this.user.id, $limit: 10000000000}, paginate: false
 		});
 
 		return this.roles = await this.context.app.service('roles').find({
-			query: {
-				id: {
-					$in: userRoles.map(it => it.role_id)
-				},
-				$limit: 10000000000
-			}, paginate: false
+			query: {id: {$in: entityRoles.map(it => it.role_id)}, $limit: 10000000000}, paginate: false
 		});
 	}
 
@@ -35,34 +27,21 @@ class Permissions {
 	 * @return {Array}
 	 */
 	async getPermissions(permissions = []) {
-		if (this.roles) await this.getRoles();
+		if (!this.roles) await this.getRoles();
 
-		const query = permissions.length !== 0 ? {'$or': []} : {};
+		const query = {};
 
-		permissions.map(it => query['$or'].push({$and: {domain_id: it.domain, action_id: it.action}}));
+		if (permissions.length !== 0)
+			query['$or'] = permissions.map(it => ({$and: {domain_id: it.domain, action_id: it.action}}));
 
 		const roles_permissions = await this.context.app.service('roles-permissions').find({
-			query: {
-				role_id: {
-					$in: this.roles.map(it => it.id)
-				},
-				$limit: 10000000000
-			}, paginate: false
+			query: {role_id: {$in: this.roles.map(it => it.id)}, $limit: 10000000000}, paginate: false
 		});
 
-		return (
-			await this.context.app.service('permissions').find({
-				query: {
-					id: {
-						$in: roles_permissions.map(it => it.permissions_id)
-					},
-					...query,
-					$limit: 10000000000
-				}, paginate: false
-			})
-		).map(it => {
-			return {id: it.id, domain: it.domain, action: it.action, target: it.target};
-		});
+		return await this.context.app.service('permissions').find({
+			query: {id: {$in: roles_permissions.map(it => it.permissions_id)}, query: query.$or, $limit: 10000000000},
+			paginate: false
+		}).then(it => it.map(it => ({id: it.id, domain: it.domain, action: it.action, target: it.target})));
 	}
 
 	/**
@@ -73,30 +52,17 @@ class Permissions {
 	 */
 	async getRequiredPermissions(domain, action) {
 		const domainPermission = await this.context.app.service('permissions-domains').find({
-			query: {
-				name: [
-					domain
-				],
-				$limit: 10000000000
-			}, paginate: false
+			query: {name: domain, $limit: 10000000000}, paginate: false
 		});
 
 		if (domainPermission.length === 0) return false/*throw errors.Conflict(`no permits are found for the required module: ${domain}`)*/;
 
 		const actionPermission = await this.context.app.service('permissions-actions').find({
-			query: {
-				name: [
-					action
-				],
-				$limit: 10000000000
-			}, paginate: false
+			query: {name: action, $limit: 10000000000}, paginate: false
 		});
 
 		if (actionPermission.length === 0) return false/*throw errors.Forbidden(`no permits are found for the required action: ${action}`)*/;
 
-		// return this.getCombinationsField(domainPermission, actionPermission).map(it => {
-		//   return it.map(element => {return {domain: element[0], action: element[1]};});
-		// });
 		return {domain: domainPermission, action: actionPermission};
 	}
 
@@ -108,9 +74,7 @@ class Permissions {
 	 * @return {Array<Array>}
 	 */
 	getCombinationsField(array1, array2, field = 'id') {
-		return array1.map(it1 => array2.map(it2 => {
-			return [it1[field], it2[field]];
-		}));
+		return array1.map(it1 => array2.map(it2 => [it1[field], it2[field]]));
 	}
 }
 
