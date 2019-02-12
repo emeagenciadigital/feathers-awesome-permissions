@@ -1,5 +1,1 @@
-declare module Router {
-    const configure: (app: any) => void;
-}
-
-export default Router;
+export function configure(app: any): void;
