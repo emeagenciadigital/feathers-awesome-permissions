@@ -1,5 +1,5 @@
-declare namespace route {
+declare module Router {
     const configure: (app: any) => void;
 }
 
-export default route;
+export default Router;
