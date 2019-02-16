@@ -29,8 +29,8 @@ let moduleExports = function (app) {
 		// Define associations here for foreign keys
 		//   - No foreign keys defined.
 		// See http://docs.sequelizejs.com/en/latest/docs/associations/
-		usersRoles.belongsTo(userModel(app), {foreignKey: 'user_id', onDelete: 'RESTRICT'});
-		usersRoles.belongsTo(roleModel(app), {foreignKey: 'role_id', onDelete: 'RESTRICT'});
+		usersRoles.belongsTo(userModel(app), {foreignKey: 'user_id', onDelete: 'CASCADE'});
+		usersRoles.belongsTo(roleModel(app), {foreignKey: 'role_id', onDelete: 'CASCADE'});
 	};
 
 	return usersRoles;

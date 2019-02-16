@@ -1,5 +1,9 @@
-import {hasPermit as _hasPermit} from './src/has-permit';
+import {HookHashAccess} from './src/give-access-to';
 import _Permissions from './src/permisions';
 
-export const hasPermit: _hasPermit;
-export const Permissions: _Permissions;
+declare namespace PermissionsModule {
+    export const HashAccess: HookHashAccess;
+    export const Permissions: _Permissions
+}
+
+export default PermissionsModule

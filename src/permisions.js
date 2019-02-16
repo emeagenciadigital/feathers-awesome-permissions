@@ -1,81 +1,81 @@
-class Permissions {
-	constructor(context, options, user) {
-		this.context = context;
-		this.options = options;
-		this.user = user;
+const defaultOptions = {
+	entity: 'user'
+};
 
-		this.roles = null;
+module.exports.getUserRoles = function (context, options) {
+
+	options = Object.assign({}, defaultOptions, options);
+
+	const {user} = context.params;
+
+	return new Promise(async resolve => {
+		const userRoles = await context.app.service(`${options.entity === 'user' ? 'users' : options.entity}-roles`)
+			.find({query: {[`${options.entity}_id`]: user.id, $limit: 10000000000}, paginate: false});
+
+		const roles = await context.app.service('roles')
+			.find({query: {id: {$in: userRoles.map(it => it.role_id)}, $limit: 10000000000}, paginate: false});
+
+		resolve(roles);
+	});
+};
+
+module.exports.getUserPermissions = function (context, options) {
+
+	options = Object.assign({}, options);
+
+	const query = {};
+
+	if (!options.roles || !Array.isArray(options.roles) || options.roles.length === 0) {
+		return Promise.resolve([]);
 	}
 
-	/**
-	 * optiene los roles del usuario
-	 * @return {Array}
-	 */
-	async getRoles() {
-		const entityRoles = await this.context.app.service('users-roles').find({
-			query: {[`${this.options.entity}_id`]: this.user.id, $limit: 10000000000}, paginate: false
-		});
-
-		return this.roles = await this.context.app.service('roles').find({
-			query: {id: {$in: entityRoles.map(it => it.role_id)}, $limit: 10000000000}, paginate: false
-		});
+	if (options.permissions && Array.isArray(options.permissions) && options.permissions.length > 0) {
+		query.$or = options.permissions.map((it) => ({$and: {domain_id: it.domain, action_id: it.action}}));
 	}
 
-	/**
-	 * regresa los permisos existentes dentro de los roles del usuario
-	 * @param {Array} permissions - permisos a buscar (si no se envian, se buscaran todos los permisos)
-	 * @return {Array}
-	 */
-	async getPermissions(permissions = []) {
-		if (!this.roles) await this.getRoles();
+	return new Promise(async resolve => {
 
-		const query = {};
+		const permissionsIds = await context.app.service('roles-permissions')
+			.find({query: {role_id: {$in: options.roles.map((it) => it.id)}, $limit: 10000000000}, paginate: false})
+			.then((it00) => it00.map((it01) => it01.permissions_id));
 
-		if (permissions.length !== 0)
-			query['$or'] = permissions.map(it => ({$and: {domain_id: it.domain, action_id: it.action}}));
+		const permissions = await context.app.service('permissions')
+			.find({query: {id: {$in: permissionsIds}, ...query, $limit: 10000000000}, paginate: false})
+			.then((it01) => it01.map((it02) => ({id: it02.id, domain: it02.domain, action: it02.action, target: it02.target})));
 
-		const roles_permissions = await this.context.app.service('roles-permissions').find({
-			query: {role_id: {$in: this.roles.map(it => it.id)}, $limit: 10000000000}, paginate: false
-		});
+		resolve(permissions);
+	});
+};
 
-		return await this.context.app.service('permissions').find({
-			query: {id: {$in: roles_permissions.map(it => it.permissions_id)}, query: query.$or, $limit: 10000000000},
-			paginate: false
-		}).then(it => it.map(it => ({id: it.id, domain: it.domain, action: it.action, target: it.target})));
+module.exports.getRequiredUserPermissions = function (context, options) {
+
+	options = Object.assign({permissions: []}, options);
+
+	if (!options.roles || !Array.isArray(options.roles) || options.roles.length === 0) {
+		return Promise.resolve([]);
 	}
 
-	/**
-	 * verifica que los permisos requeridos existan
-	 * @param {string} domain
-	 * @param {string} action
-	 * @return {Array<Array>|boolean}
-	 */
-	async getRequiredPermissions(domain, action) {
-		const domainPermission = await this.context.app.service('permissions-domains').find({
-			query: {name: domain, $limit: 10000000000}, paginate: false
-		});
+	return new Promise(async resolve => {
 
-		if (domainPermission.length === 0) return false/*throw errors.Conflict(`no permits are found for the required module: ${domain}`)*/;
+		const permissions = [];
 
-		const actionPermission = await this.context.app.service('permissions-actions').find({
-			query: {name: action, $limit: 10000000000}, paginate: false
-		});
+		for (let value of options.permissions) {
+			const domainPermission = await context.app.service('permissions-domains').find({
+				query: {name: value.domain, $limit: 10000000000}, paginate: false
+			});
 
-		if (actionPermission.length === 0) return false/*throw errors.Forbidden(`no permits are found for the required action: ${action}`)*/;
+			const actionPermission = await context.app.service('permissions-actions').find({
+				query: {name: value.action, $limit: 10000000000}, paginate: false
+			});
 
-		return {domain: domainPermission, action: actionPermission};
-	}
+			if (domainPermission.length > 0 && actionPermission.length > 0) {
+				permissions.push({domain: domainPermission[0], action: actionPermission[0]});
+			} else {
+				permissions.push(false);
+			}
 
-	/**
-	 * calcula todas las combinaciones posibles de un campo en dos arrays de objetos
-	 * @param {Array<JSON>} array1
-	 * @param {Array<JSON>} array2
-	 * @param {string} field
-	 * @return {Array<Array>}
-	 */
-	getCombinationsField(array1, array2, field = 'id') {
-		return array1.map(it1 => array2.map(it2 => [it1[field], it2[field]]));
-	}
-}
+		}
 
-module.exports = Permissions;
+		resolve(permissions);
+	});
+};
