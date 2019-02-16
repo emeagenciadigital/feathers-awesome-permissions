@@ -6,14 +6,14 @@ const defaultOptions = {
 };
 
 
-module.exports.getContextSession = () => {
+function getContextSession() {
     return (context) => {
         return context.params.user ? Promise.resolve(context) : (authenticate('jwt')(context).catch(() => Promise.resolve(context)));
     }
 };
 
 
-module.exports.getSession = function (options) {
+function getSession(options) {
     options = Object.assign({}, defaultOptions, options);
 
 	return (context00) => {
@@ -38,3 +38,7 @@ module.exports.getSession = function (options) {
 		});
 	};
 };
+
+
+module.exports.getContextSession = getContextSession
+module.exports.getSession = getSession

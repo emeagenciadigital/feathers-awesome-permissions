@@ -46,7 +46,7 @@ function hasAccess(userPermissions, options) {
 module.exports.giveAccessTo = function (options = {}) {
     // Return the actual hook.
 
-    options = assign({}, defaultOptions, options);
+    options = Object.assign({}, defaultOptions, options);
 
     return (context00) => {
         return getSession(options)(context00).then((context01) => {
