@@ -1,27 +1,22 @@
 // Hooks for service `permissionsDomains`. (Can be re-generated.)
 const commonHooks = require('feathers-hooks-common');
-const {authenticate} = require('@feathersjs/authentication').hooks;
+
+const {giveAccessTo} = require('../../../give-access-to');
 
 // eslint-disable-next-line no-unused-vars
 const {iff} = commonHooks;
 
 let moduleExports = {
 	before: {
-		all: [],
+        all: [
+            giveAccessTo({onlyAdmin: true})
+        ],
 		find: [],
 		get: [],
-		create: [
-			authenticate('jwt')
-		],
-		update: [
-			authenticate('jwt')
-		],
-		patch: [
-			authenticate('jwt')
-		],
-		remove: [
-			authenticate('jwt')
-		]
+        create: [],
+        update: [],
+        patch: [],
+        remove: []
 	},
 
 	after: {

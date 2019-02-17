@@ -1,15 +1,17 @@
 const defaultOptions = {
-	entity: 'user'
+    entity: 'user',
+    allowAnonymousUsers: false,
+    anonymousUserId: 0
 };
 
 module.exports.getUserRoles = function (context, options) {
 
 	options = Object.assign({}, defaultOptions, options);
 
-	const {user} = context.params;
+    const {user} = options.allowAnonymousUsers ? {id: options.anonymousUserId} : context.params;
 
 	return new Promise(async resolve => {
-		const userRoles = await context.app.service(`${options.entity === 'user' ? 'users' : options.entity}-roles`)
+        const userRoles = await context.app.service(`users-roles`)
 			.find({query: {[`${options.entity}_id`]: user.id, $limit: 10000000000}, paginate: false});
 
 		const roles = await context.app.service('roles')

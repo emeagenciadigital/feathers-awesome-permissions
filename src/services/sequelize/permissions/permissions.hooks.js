@@ -1,6 +1,7 @@
 // Hooks for service `permissions`. (Can be re-generated.)
 const commonHooks = require('feathers-hooks-common');
-const {authenticate} = require('@feathersjs/authentication').hooks;
+
+const {giveAccessTo} = require('../../../give-access-to');
 
 // eslint-disable-next-line no-unused-vars
 const {iff, fastJoin} = commonHooks;
@@ -25,29 +26,21 @@ const postResolvers = {
 
 let moduleExports = {
 	before: {
-		all: [],
-		find: [
-			authenticate('jwt')
+        all: [
+            giveAccessTo({onlyAdmin: true})
 		],
-		get: [
-			authenticate('jwt')
-		],
-		create: [
-			authenticate('jwt')
-		],
-		update: [
-			authenticate('jwt')
-		],
-		patch: [
-			authenticate('jwt')
-		],
-		remove: [
-			authenticate('jwt')
-		]
+        find: [],
+        get: [],
+        create: [],
+        update: [],
+        patch: [],
+        remove: []
 	},
 
 	after: {
-		all: [fastJoin(postResolvers)],
+        all: [
+            fastJoin(postResolvers)
+        ],
 		find: [],
 		get: [],
 		create: [],
