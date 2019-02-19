@@ -20,7 +20,7 @@ module.exports.grantAccessTo = function (options = {}) {
 
         options = Object.assign({
             domain: context.path,
-            actions: ['create', 'read', 'update', 'delete']
+            actions: ['read', 'update', 'delete']
         }, defaultOptions, options);
 
         const records = getItems(context);
