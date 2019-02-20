@@ -9,9 +9,6 @@ let moduleExports = merge({},
 	{
 		name: {
 			type: DataTypes.STRING(45),
-			validate: {
-				isAlphanumeric: true
-			},
 			unique: true,
 			allowNull: false
 		},
