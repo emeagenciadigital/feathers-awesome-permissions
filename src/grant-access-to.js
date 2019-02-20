@@ -49,7 +49,7 @@ module.exports.grantAccessTo = function (options = {}) {
                 .find({query: {name: action}}).then(it => it.data[0]);
 
             if (!_action)
-                await context.app.service('permissions-actions').create({name: options.domain});
+                _action = await context.app.service('permissions-actions').create({name: action});
 
             let permissions = context.app.service('permissions')
                 .create({domain_id: domain.id, action_id: _action.id, target: records[options.entityField]});
