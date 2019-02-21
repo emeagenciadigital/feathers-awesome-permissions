@@ -4,44 +4,44 @@ const defaultOptions = {
     anonymousUserId: 0
 };
 
-module.exports.getUserRoles = function (context, options) {
+module.exports.getUserRoles = function (ctx, opts) {
 
-	options = Object.assign({}, defaultOptions, options);
+	opts = Object.assign({}, defaultOptions, opts);
 
-    const {user} = options.allowAnonymousUsers ? {id: options.anonymousUserId} : context.params;
+	const user = opts.allowAnonymousUsers ? {id: opts.anonymousUserId} : opts.user ? opts.user : ctx.params.user;
 
 	return new Promise(async resolve => {
-        const userRoles = await context.app.service(`users-roles`)
-			.find({query: {[`${options.entity}_id`]: user.id, $limit: 10000000000}, paginate: false});
+		const userRoles = await ctx.app.service(`users-roles`)
+			.find({query: {[`${opts.entity}_id`]: user.id, $limit: 10000000000}, paginate: false});
 
-		const roles = await context.app.service('roles')
+		const roles = await ctx.app.service('roles')
 			.find({query: {id: {$in: userRoles.map(it => it.role_id)}, $limit: 10000000000}, paginate: false});
 
 		resolve(roles);
 	});
 };
 
-module.exports.getUserPermissions = function (context, options) {
+module.exports.getUserPermissions = function (ctx, opts) {
 
-	options = Object.assign({}, options);
+	opts = Object.assign({}, opts);
 
 	const query = {};
 
-	if (!options.roles || !Array.isArray(options.roles) || options.roles.length === 0) {
+	if (!opts.roles || !Array.isArray(opts.roles) || opts.roles.length === 0) {
 		return Promise.resolve([]);
 	}
 
-	if (options.permissions && Array.isArray(options.permissions) && options.permissions.length > 0) {
-		query.$or = options.permissions.map((it) => ({$and: {domain_id: it.domain, action_id: it.action}}));
+	if (opts.permissions && Array.isArray(opts.permissions) && opts.permissions.length > 0) {
+		query.$or = opts.permissions.map((it) => ({$and: {domain_id: it.domain, action_id: it.action}}));
 	}
 
 	return new Promise(async resolve => {
 
-		const permissionsIds = await context.app.service('roles-permissions')
-			.find({query: {role_id: {$in: options.roles.map((it) => it.id)}, $limit: 10000000000}, paginate: false})
+		const permissionsIds = await ctx.app.service('roles-permissions')
+			.find({query: {role_id: {$in: opts.roles.map((it) => it.id)}, $limit: 10000000000}, paginate: false})
 			.then((it00) => it00.map((it01) => it01.permissions_id));
 
-		const permissions = await context.app.service('permissions')
+		const permissions = await ctx.app.service('permissions')
 			.find({query: {id: {$in: permissionsIds}, ...query, $limit: 10000000000}, paginate: false})
 			.then((it01) => it01.map((it02) => ({id: it02.id, domain: it02.domain, action: it02.action, target: it02.target})));
 
@@ -49,11 +49,11 @@ module.exports.getUserPermissions = function (context, options) {
 	});
 };
 
-module.exports.getRequiredUserPermissions = function (context, options) {
+module.exports.getRequiredUserPermissions = function (ctx, opts) {
 
-	options = Object.assign({permissions: []}, options);
+	opts = Object.assign({permissions: []}, opts);
 
-	if (!options.roles || !Array.isArray(options.roles) || options.roles.length === 0) {
+	if (!opts.roles || !Array.isArray(opts.roles) || opts.roles.length === 0) {
 		return Promise.resolve([]);
 	}
 
@@ -61,12 +61,12 @@ module.exports.getRequiredUserPermissions = function (context, options) {
 
 		const permissions = [];
 
-		for (let value of options.permissions) {
-			const domainPermission = await context.app.service('permissions-domains').find({
+		for (let value of opts.permissions) {
+			const domainPermission = await ctx.app.service('permissions-domains').find({
 				query: {name: value.domain, $limit: 10000000000}, paginate: false
 			});
 
-			const actionPermission = await context.app.service('permissions-actions').find({
+			const actionPermission = await ctx.app.service('permissions-actions').find({
 				query: {name: value.action, $limit: 10000000000}, paginate: false
 			});
 

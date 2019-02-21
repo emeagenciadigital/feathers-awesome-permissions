@@ -48,7 +48,7 @@ module.exports.giveAccessTo = function (options = {}) {
     options = Object.assign({}, defaultOptions, options);
     return ctx => new Promise(async (resolve, reject) => {
 
-        ctx = await getSession(options)(ctx);
+        ctx = await getSession(ctx, options);
 
         // si el llamado es interno no hacemos ninguna validacion y pasamos
         if (!ctx.params.provider) {
