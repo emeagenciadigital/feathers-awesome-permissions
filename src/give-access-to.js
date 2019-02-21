@@ -158,7 +158,7 @@ module.exports.giveAccessTo = function (options = {}) {
                 if (
                     targets.includes('self') &&
                     thisElement[options.restrictToOwner.otherField] &&
-                    thisElement[options.restrictToOwner.otherField] !== session[options.restrictToOwner.ownerField]
+                    thisElement[options.restrictToOwner.otherField] !== user[options.restrictToOwner.ownerField]
                 ) {
                     reject(new Forbidden('access denied'));
                     return;
@@ -168,7 +168,7 @@ module.exports.giveAccessTo = function (options = {}) {
                 ctx.params.query[options.restrictToOwner.otherField] = {
                     $in: [
                         ...(targets.filter(it => !isNaN(Number(it))).map(x => Number(x))),
-                        ...(targets.includes('self') ? [session[options.restrictToOwner.ownerField]] : [])
+                        ...(targets.includes('self') ? [user[options.restrictToOwner.ownerField]] : [])
                     ]
                 };
             }
