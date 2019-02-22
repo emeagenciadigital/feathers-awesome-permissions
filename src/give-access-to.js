@@ -150,7 +150,7 @@ module.exports.giveAccessTo = function (options = {}) {
                     if (!thisElement) {
                         reject(new NotFound(`${ctx.path} not found`));
                         return;
-                    };
+                    }
 
                     if (
                         targets.includes('self') &&
