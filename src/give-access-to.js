@@ -144,18 +144,23 @@ module.exports.giveAccessTo = function (options = {}) {
 
                 let mt = ctx.method;
 
-                if ((mt === 'get' || mt === 'update' || mt === 'patch' || mt === 'remove') && ctx.id) {
+                if (['get', 'update', 'patch', 'remove'].includes(mt) && ctx.id) {
                     const thisElement = await ctx.app.service(ctx.path).get(ctx.id);
-
+                    
                     if (!thisElement) {
                         reject(new NotFound(`${ctx.path} not found`));
                         return;
                     }
 
                     if (
-                        targets.includes('self') &&
-                        thisElement[options.restrictToOwner.otherField] &&
-                        thisElement[options.restrictToOwner.otherField] !== user[options.restrictToOwner.ownerField]
+                        (
+                            !targets.includes('self') && 
+                            targets.filter(item => Number(item) === Number(thisElement[options.restrictToOwner.otherField])).length === 0
+                        ) ||
+                        (
+                            targets.includes('self') && 
+                            Number(user[options.restrictToOwner.ownerField]) !== Number(thisElement[options.restrictToOwner.otherField])
+                        )
                     ) {
                         reject(new Forbidden('access denied'));
                         return;
