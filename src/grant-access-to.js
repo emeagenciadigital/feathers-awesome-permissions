@@ -66,7 +66,7 @@ module.exports.grantAccessTo = function (options = {}) {
                 if (!action)
                     action = await context.app.service('permissions-actions').create({name: p2.action});
 
-                let permissions = context.app.service('permissions')
+                let permissions = await context.app.service('permissions')
                     .create({
                         domain_id: domain.id,
                         action_id: action.id,

@@ -53,7 +53,8 @@ module.exports.giveAccessTo = function (options = {}) {
     }
     if (options.restrictToOwner && !options.restrictToOwner.otherField) {
         options.restrictToOwner.otherField = 'id';
-    } else if (options.restrictToOwner && !options.restrictToOwner.otherField) {
+    }
+    if (options.restrictToOwner && !options.restrictToOwner.ownerField) {
         options.restrictToOwner.ownerField = 'id';
     }
 
@@ -62,7 +63,8 @@ module.exports.giveAccessTo = function (options = {}) {
     }
     if (options.assignToOwner && !options.assignToOwner.otherField) {
         options.assignToOwner.otherField = 'id';
-    } else if (options.assignToOwner && !options.assignToOwner.otherField) {
+    }
+    if (options.assignToOwner && !options.assignToOwner.ownerField) {
         options.assignToOwner.ownerField = 'id';
     }
 
@@ -155,6 +157,11 @@ module.exports.giveAccessTo = function (options = {}) {
 
             // get target;
             if (targets.includes('*')) {
+
+                if (['create'].includes(ctx.method) && options.assignToOwner) {
+                    records[options.assignToOwner.otherField] = user[options.assignToOwner.ownerField];
+                }
+
                 replaceItems(ctx, records);
                 resolve(ctx);
                 return;
@@ -193,8 +200,6 @@ module.exports.giveAccessTo = function (options = {}) {
                             ...(targets.includes('self') ? [user[options.restrictToOwner.ownerField]] : [])
                         ]
                     };
-                } else if (['create'].includes(mt) && options.assignToOwner) {
-                    records[options.assignToOwner.otherField] = user[options.assignToOwner.ownerField];
                 }
             }
 
