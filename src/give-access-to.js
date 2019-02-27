@@ -179,16 +179,19 @@ module.exports.giveAccessTo = function (options = {}) {
                         return;
                     }
 
-                    if (
-                        (
-                            !targets.includes('self') &&
-                            targets.filter(item => Number(item) === Number(thisElement[options.restrictToOwner.otherField])).length === 0
-                        ) ||
-                        (
-                            targets.includes('self') &&
-                            Number(user[options.restrictToOwner.ownerField]) !== Number(thisElement[options.restrictToOwner.otherField])
-                        )
-                    ) {
+                    let targetValid;
+                    if (targets.includes('self')) {
+                        targetValid = Number(user[options.restrictToOwner.ownerField]) === Number(thisElement[options.restrictToOwner.otherField]);
+                        if (!targetValid) {
+                            targetValid = targets
+                                .filter(item => Number(item) === Number(thisElement[options.restrictToOwner.otherField])).length
+                        }
+                    } else {
+                        targetValid = targets
+                            .filter(item => Number(item) === Number(thisElement[options.restrictToOwner.otherField])).length
+                    }
+
+                    if (!targetValid) {
                         reject(new Forbidden('access denied'));
                         return;
                     }
