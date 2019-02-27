@@ -39,7 +39,7 @@ module.exports.grantAccessTo = function (options = {}) {
 
         if (!user && context.path !== options.userEntity)
             return context;
-        else
+        else if (!user && context.path === options.userEntity)
             user = records;
 
         let role = await context.app.service('roles')
