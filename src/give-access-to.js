@@ -13,6 +13,7 @@ const defaultOptions = {
         ownerField: 'id',
         otherField: 'id'
     },
+    assignToOwner: false,
     onlyAdmin: false
 };
 
@@ -46,6 +47,25 @@ function hasAccess(userPermissions, options) {
 
 module.exports.giveAccessTo = function (options = {}) {
     options = Object.assign({}, defaultOptions, options);
+
+    if (options.restrictToOwner && typeof options.restrictToOwner !== 'object') {
+        options.restrictToOwner = {};
+    }
+    if (options.restrictToOwner && !options.restrictToOwner.otherField) {
+        options.restrictToOwner.otherField = 'id';
+    } else if (options.restrictToOwner && !options.restrictToOwner.otherField) {
+        options.restrictToOwner.ownerField = 'id';
+    }
+
+    if (options.assignToOwner && typeof options.assignToOwner !== 'object') {
+        options.assignToOwner = {};
+    }
+    if (options.assignToOwner && !options.assignToOwner.otherField) {
+        options.assignToOwner.otherField = 'id';
+    } else if (options.assignToOwner && !options.assignToOwner.otherField) {
+        options.assignToOwner.ownerField = 'id';
+    }
+
     return ctx => new Promise(async (resolve, reject) => {
         try {
             ctx = await getSession(ctx, options);
@@ -144,9 +164,9 @@ module.exports.giveAccessTo = function (options = {}) {
 
                 let mt = ctx.method;
 
-                if (['get', 'update', 'patch', 'remove'].includes(mt) && ctx.id) {
+                if (['get', 'update', 'patch', 'remove'].includes(mt) && options.restrictToOwner && ctx.id) {
                     const thisElement = await ctx.app.service(ctx.path).get(ctx.id);
-                    
+
                     if (!thisElement) {
                         reject(new NotFound(`${ctx.path} not found`));
                         return;
@@ -154,18 +174,18 @@ module.exports.giveAccessTo = function (options = {}) {
 
                     if (
                         (
-                            !targets.includes('self') && 
+                            !targets.includes('self') &&
                             targets.filter(item => Number(item) === Number(thisElement[options.restrictToOwner.otherField])).length === 0
                         ) ||
                         (
-                            targets.includes('self') && 
+                            targets.includes('self') &&
                             Number(user[options.restrictToOwner.ownerField]) !== Number(thisElement[options.restrictToOwner.otherField])
                         )
                     ) {
                         reject(new Forbidden('access denied'));
                         return;
                     }
-                } else if ((mt === 'find' || mt === 'update' || mt === 'patch' || mt === 'remove') && !ctx.id) {
+                } else if (['find', 'update', 'patch', 'remove'].includes(mt) && options.restrictToOwner && !ctx.id) {
 
                     ctx.params.query[options.restrictToOwner.otherField] = {
                         $in: [
@@ -173,6 +193,8 @@ module.exports.giveAccessTo = function (options = {}) {
                             ...(targets.includes('self') ? [user[options.restrictToOwner.ownerField]] : [])
                         ]
                     };
+                } else if (['create'].includes(mt) && options.assignToOwner) {
+                    records[options.assignToOwner.otherField] = user[options.assignToOwner.ownerField];
                 }
             }
 
